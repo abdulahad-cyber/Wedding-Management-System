@@ -1,0 +1,94 @@
+ 
+  # Triggers
+    # Create the trigger function check_and_update_car_quantity
+    op.execute("""
+    CREATE OR REPLACE FUNCTION check_and_update_car_quantity()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF (SELECT car_quantity FROM car WHERE car_id = NEW.car_id) > 0 THEN
+            UPDATE car
+            SET car_quantity = car_quantity - 1
+            WHERE car_id = NEW.car_id;
+            RETURN NEW;
+        ELSE
+            RAISE EXCEPTION 'Cannot reserve car: insufficient quantity';
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+    """)
+
+    # Create the trigger car_reservation_trigger
+    op.execute("""
+    CREATE TRIGGER car_reservation_trigger
+    BEFORE INSERT ON car_reservation
+    FOR EACH ROW
+    EXECUTE FUNCTION check_and_update_car_quantity();
+    """)
+
+    # ### end Alembic commands ###
+
+
+
+     # Drop the car_reservation_trigger trigger first
+    op.execute(
+        "DROP TRIGGER IF EXISTS car_reservation_trigger ON car_reservation;")
+
+    # Drop the check_and_update_car_quantity function
+    op.execute("DROP FUNCTION IF EXISTS check_and_update_car_quantity;")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    pls sql queries
+
+    drop all Tables, Enums, triggers and check_and_update_car_quantity function
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT table_name FROM information_schema.tables WHERE table_schema = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || r.table_name || ' CASCADE';
+    END LOOP;
+END $$;
+
+
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT n.nspname, t.typname 
+              FROM pg_type t
+              JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+              WHERE t.typtype = 'e' AND n.nspname != 'pg_catalog' AND n.nspname != 'information_schema') LOOP
+        EXECUTE 'DROP TYPE IF EXISTS ' || r.nspname || '.' || r.typname || ' CASCADE';
+    END LOOP;
+END $$;
+
+
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tgname, tgrelid::regclass
+              FROM pg_trigger
+              WHERE NOT tgisinternal) LOOP
+        EXECUTE 'DROP TRIGGER IF EXISTS ' || r.tgname || ' ON ' || r.tgrelid;
+    END LOOP;
+
+END $$;
+
+
+DROP FUNCTION IF EXISTS check_and_update_car_quantity() CASCADE;

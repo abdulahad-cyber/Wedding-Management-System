@@ -1,0 +1,6 @@
+{
+    "ignore": [
+        "./migrations/**/*.py"  // Adjust this path to your specific folder
+    ],
+    "typeCheckingMode": "strict"
+}
